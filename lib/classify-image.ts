@@ -45,7 +45,7 @@ type OpenRouterResponse = {
 
 
 
-export async function classifyIsBeverageImage(base64Image: string) {
+export async function classifyIsBeverageImage(image: Uint8Array<ArrayBuffer>) {
 
     const fetchResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -66,7 +66,7 @@ export async function classifyIsBeverageImage(base64Image: string) {
                         {
                             type: 'image_url',
                             image_url: {
-                                url: base64Image,
+                                url: `data:image/jpeg;base64,${image.toBase64()}`,
                             },
                         },
                     ],

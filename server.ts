@@ -1,16 +1,23 @@
 import { mkdir } from "node:fs/promises";
 import { setupBeverageStore, storeBeverage } from "./lib/beverage-store";
+import { processImage } from "./lib/process-image";
+import { randomUUIDv7 } from "bun";
+import { rm } from "node:fs/promises";
+import { classifyIsBeverageImage } from "./lib/classify-image";
 
-const dataFolder = Bun.file('./data');
+await mkdir("./data", {
+    recursive: true,
+});
 
-if (!(await dataFolder.exists())) {
-    await mkdir("./data");
-}
+await rm("./data/tmp", { recursive: true }).catch(() => null);
+await mkdir("./data/tmp", { recursive: true });
+await mkdir("./data/images", { recursive: true });
 
-const beverageStoreCtx = setupBeverageStore('./data/beverages.db');
 
 const host = process.env.PORT ? "0.0.0.0" : "localhost";
 const port = Number(process.env.PORT || 3000);
+const MAX_IMAGE_SIZE_BYTES = (1024 * 1024);
+const beverageStoreCtx = setupBeverageStore('./data/beverages.db');
 
 const indexPageHtml = await Bun.file("./html/index.html").text();
 
@@ -19,7 +26,6 @@ function renderIndexPage({ }: {}) {
     return indexPageHtml.replace("$PAGE_LINKS", [].join("\n")).replace("$BEVERAGES", [].join("\n"));
 }
 
-const MAX_IMAGE_SIZE_BYTES = (1024 * 1024);
 
 Bun.serve({
     hostname: host,
@@ -38,7 +44,25 @@ Bun.serve({
                     return new Response("image cannot be larger than 1mb", { status: 400 });
                 }
 
-                await storeBeverage(beverageStoreCtx, image);
+                const tmpId = randomUUIDv7();
+                const tmpIn = Bun.file(`./data/tmp/image-in-${tmpId}.jpg`);
+                const tmpOut = Bun.file(`./data/tmp/image-out-${tmpId}.jpg`);
+
+                tmpIn.write(await image.bytes());
+
+                await processImage(tmpIn, tmpOut);
+
+                await rm(tmpIn.name as string);
+                // tmpOut is moved by beverage store
+
+                const isBeverageImage = await classifyIsBeverageImage(await image.bytes());
+
+                if (!isBeverageImage) {
+                    //@TODO proper UX
+                    return new Response("this is not an image of a beverage", { status: 400 });
+                }
+
+                await storeBeverage(beverageStoreCtx, tmpOut);
 
                 return new Response(renderIndexPage({}), { headers: { "Content-Type": "text/html" } });
             }

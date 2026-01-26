@@ -4,15 +4,21 @@ import { getBeverage, setupBeverageStore, storeBeverage } from "../lib/beverage-
 
 describe("beverage store", () => {
     test("store beverage", async () => {
-        const file = Bun.file('./tests/images/processed-image.jpg')
-        const blob = new Blob([await file.bytes()]);
+        const srcFile = Bun.file('./tests/images/processed-image.jpg');
+        const tmpFile = Bun.file('./tests/images/processed-image-tmp.jpg');
+
+        await tmpFile.write(await srcFile.bytes());
+
 
         const ctx = setupBeverageStore(':memory:');
 
-        const id = await storeBeverage(ctx, blob);
+        const id = await storeBeverage(ctx, tmpFile);
 
         const retrieved = await getBeverage(ctx, id);
 
-        expect(retrieved.file.size).toEqual(file.size);
+
+        console.log(retrieved.file.name)
+
+        expect(retrieved.file.size).toEqual(srcFile.size);
     });
 })

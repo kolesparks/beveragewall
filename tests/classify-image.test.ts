@@ -14,8 +14,7 @@ describe("classify image", () => {
     for await (const yesImagePath of beverageYes.scan()) {
       const yesImageFile = Bun.file(yesImagePath);
       const yesImageBytes = await yesImageFile.bytes();
-      const yesImageBase64Url = `data:image/jpeg;base64,${yesImageBytes.toBase64()}`;
-      const isBeverageImage = await classifyIsBeverageImage(yesImageBase64Url);
+      const isBeverageImage = await classifyIsBeverageImage(yesImageBytes);
 
       expect(isBeverageImage, `Expected ${yesImagePath} to be classified as a beverage image`).toBeTrue()
     }
@@ -27,8 +26,7 @@ describe("classify image", () => {
     for await (const noImagePath of beverageNo.scan()) {
       const noImageFile = Bun.file(noImagePath);
       const noImageBytes = await noImageFile.bytes();
-      const noImageBase64Url = `data:image/jpeg;base64,${noImageBytes.toBase64()}`;
-      const isBeverageImage = await classifyIsBeverageImage(noImageBase64Url);
+      const isBeverageImage = await classifyIsBeverageImage(noImageBytes);
 
       expect(isBeverageImage, `Expected ${noImagePath} to NOT be classified as a beverage image`).toBeFalse()
     }
@@ -40,8 +38,7 @@ describe("classify image", () => {
     for await (const nsfwImagePath of nsfw.scan()) {
       const nsfwImageFile = Bun.file(nsfwImagePath);
       const nsfwImageBytes = await nsfwImageFile.bytes();
-      const nsfwImageBase64Url = `data:image/jpeg;base64,${nsfwImageBytes.toBase64()}`;
-      const isBeverageImage = await classifyIsBeverageImage(nsfwImageBase64Url);
+      const isBeverageImage = await classifyIsBeverageImage(nsfwImageBytes);
 
       expect(isBeverageImage, `Expected ${nsfwImagePath} to NOT be classified as a beverage image`).toBeFalse()
     }

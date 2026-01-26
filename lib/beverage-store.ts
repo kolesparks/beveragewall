@@ -1,6 +1,7 @@
 
+import type { BunFile } from "bun";
 import { Database } from "bun:sqlite";
-
+import { rename } from "node:fs/promises";
 
 export function setupBeverageStore(path: string) {
 
@@ -28,13 +29,15 @@ export function setupBeverageStore(path: string) {
 export type BeverageStoreCtx = ReturnType<typeof setupBeverageStore>;
 
 
-export async function storeBeverage(ctx: BeverageStoreCtx, image: Blob) {
+export async function storeBeverage(ctx: BeverageStoreCtx, tmpImagefile: BunFile) {
     const res = ctx.queries.insertBeverage.get(new Date().toISOString()) as { rowid: number };
 
-    const imageBytes = await image.bytes();
-    const imageFile = Bun.file(`./data/images/${res.rowid}.jpg`);
 
-    await imageFile.write(imageBytes);
+    if (!tmpImagefile.name) {
+        throw new Error('storeBeverage failed because tmpImageFile has no name');
+    }
+
+    await rename(tmpImagefile.name!, `./data/images/${res.rowid}.jpg`);
 
 
     return res.rowid;
