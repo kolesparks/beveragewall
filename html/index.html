@@ -1,27 +1,36 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <title>Beverage Wall</title>
-        <meta name="charset" content="UTF-8"/>
-        <meta name="description" content="Post a picture of your beverage. No login. No Ads."/>
-    </head>
-    <body>
-        <main>
-            <section>
-                <ol>
-                    $BEVERAGES
-                </ol>
-                $PAGE_NAV
-            </section>
-        </main>
 
-        <footer>
-            <p>
-                Hand crafted by <a href="https://kolesparks.com" target="_blank" rel="noreferrer">Kole Sparks</a>. Open
-                Source on <a href="https://github.com/kolesparks/headlinefilter" target="_blank"
-                    rel="noreferrer">GitHub</a>. Hosted on <a href="https://railway.com?referralCode=ABSfL6"
-                    rel="noreferrer">Railway</a>.
-            </p>
-        </footer>
-    </body>
+<head>
+    <title>Beverage Wall</title>
+    <meta charset="UTF-8" />
+    <meta name="description" content="Post a picture of your beverage. No login. No Ads." />
+</head>
+
+<body>
+    <main>
+        <section>
+            <form action="/" method="post" enctype="multipart/form-data">
+                <input id="image-input" type="file" name="image" required />
+                <button type="submit">Upload</button>
+            </form>
+            <ol>
+                $BEVERAGES
+            </ol>
+            <nav>
+                $PAGE_LINKS
+            </nav>
+        </section>
+    </main>
+
+    <footer>
+        <p>
+            Hand crafted by <a href="https://kolesparks.com" target="_blank" rel="noreferrer">Kole Sparks</a>. Open
+            Source on <a href="https://github.com/kolesparks/headlinefilter" target="_blank"
+                rel="noreferrer">GitHub</a>. Hosted on <a href="https://railway.com?referralCode=ABSfL6"
+                rel="noreferrer">Railway</a>.
+        </p>
+    </footer>
+</body>
+
 </html>
