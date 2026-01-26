@@ -34,3 +34,5 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .DS_Store
 
 tests/images/nsfw
+tests/images/unprocessed-image.jpg
+tests/images/processed-image-tmp.jpg
