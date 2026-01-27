@@ -16,12 +16,14 @@ export function setupBeverageStore(path: string) {
 
     const insertBeverage = db.query('insert into beverages (created_at) VALUES (?) RETURNING rowid');
     const selectBeverage = db.query('select created_at from beverages where rowid = ?');
+    const selectBeverages = db.query<{ rowid: number, created_at: string }, [number, number]>('select rowid,created_at from beverages where rowid > ? order by rowid desc limit ?');
 
     return {
         db,
         queries: {
             insertBeverage,
-            selectBeverage
+            selectBeverage,
+            selectBeverages
         }
     }
 }
@@ -48,4 +50,17 @@ export async function getBeverage(ctx: BeverageStoreCtx, rowid: number) {
         file: Bun.file(`./data/images/${rowid}.jpg`),
         meta: ctx.queries.selectBeverage.get(rowid)
     }
+}
+
+
+
+export function listBeverages(ctx: BeverageStoreCtx, afterRowId: number, limit: number) {
+
+    const rows = ctx.queries.selectBeverages.all(afterRowId, limit);
+
+
+    return rows.map((r) => ({
+        file: Bun.file(`./data/images/${r.rowid}.jpg`),
+        meta: r,
+    }))
 }
