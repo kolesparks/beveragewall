@@ -69,7 +69,8 @@ Bun.serve({
 
             return new Response(renderIndexPage({}), { headers: { "Content-Type": "text/html" } });
         },
-    }
+    },
+    maxRequestBodySize: MAX_IMAGE_SIZE_BYTES * 1.5
 })
 
 
