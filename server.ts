@@ -78,7 +78,7 @@ Bun.serve({
 
                 await storeBeverage(beverageStoreCtx, tmpOut);
 
-                return new Response(renderIndexPage({}), { headers: { "Content-Type": "text/html" } });
+                // fall through to main list beverages render
             }
 
 
