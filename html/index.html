@@ -4,17 +4,76 @@
 <head>
     <title>Beverage Wall</title>
     <meta charset="UTF-8" />
-    <meta name="description" content="Post a picture of your beverage. No login. No Ads." />
+    <meta name="description" content="Add your beverage to the wall." />
+    <style>
+        body {
+            background-color: #F9F8F6;
+        }
+
+        form input[type="file"] {
+            display: none;
+        }
+
+        .add-beverage-button {
+            position: fixed;
+            bottom: 1.5em;
+            right: 1.5em;
+            border: 1px solid #C9B59C;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 3em;
+            height: 3em;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        ol {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+        }
+
+        li {
+            list-style: none;
+            border: 1px solid #D9CFC7;
+            border-radius: 5px;
+            padding: 10px;
+            width: 80%;
+            max-width: 400px;
+            height: 400px;
+            background-color: #EFE9E3;
+
+        }
+
+        li:last-child {
+            margin-bottom: 2em;
+        }
+
+        img {
+            height: 100%;
+            width: 100%;
+            object-fit: contain;
+            overflow: hidden;
+        }
+    </style>
 </head>
 
 <body>
     <main>
         <section>
             <form action="/" method="post" enctype="multipart/form-data">
+                <label for="image-input" class="add-beverage-button">
+                    +🍺
+                </label>
                 <input id="image-input" type="file" name="image" required />
-                <button type="submit">Upload Beverage</button>
+
+                <input id="file-upload" type="file" />
+                <button type="submit" hidden>Upload Beverage</button>
                 <p class="error">$UPLOAD_ERROR</p>
-                <p class="disclaimer">Your image is sent to <a href="https://openrouter.ai" target="_blank"
+                <p class="disclaimer" hidden>Your image is sent to <a href="https://openrouter.ai" target="_blank"
                         rel="noreferrer">OpenRouter</a> for beverage detection.</p>
             </form>
             <ol>
