@@ -12,8 +12,10 @@
         <section>
             <form action="/" method="post" enctype="multipart/form-data">
                 <input id="image-input" type="file" name="image" required />
-                <button type="submit">Upload</button>
-                <p>$UPLOAD_ERROR</p>
+                <button type="submit">Upload Beverage</button>
+                <p class="error">$UPLOAD_ERROR</p>
+                <p class="disclaimer">Your image is sent to <a href="https://openrouter.ai" target="_blank"
+                        rel="noreferrer">OpenRouter</a> for beverage detection.</p>
             </form>
             <ol>
                 $BEVERAGES

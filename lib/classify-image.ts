@@ -1,3 +1,4 @@
+import type { BunFile } from "bun";
 
 
 
@@ -45,7 +46,7 @@ type OpenRouterResponse = {
 
 
 
-export async function classifyIsBeverageImage(image: Uint8Array<ArrayBuffer>) {
+export async function classifyIsBeverageImage(image: BunFile) {
 
     const fetchResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -66,7 +67,7 @@ export async function classifyIsBeverageImage(image: Uint8Array<ArrayBuffer>) {
                         {
                             type: 'image_url',
                             image_url: {
-                                url: `data:image/jpeg;base64,${image.toBase64()}`,
+                                url: `data:image/jpeg;base64,${(await image.bytes()).toBase64()}`,
                             },
                         },
                     ],
@@ -77,8 +78,13 @@ export async function classifyIsBeverageImage(image: Uint8Array<ArrayBuffer>) {
         }),
     });
 
-    const openRouterResposne = await fetchResponse.json() as OpenRouterResponse;
+    const openRouterResponse = await fetchResponse.json() as OpenRouterResponse;
+
+    if (!openRouterResponse.choices?.[0]?.message?.content) {
+        console.error("OpenRouter returned no content", JSON.stringify(openRouterResponse));
+        throw new Error("OpenRouter returned no content");
+    }
 
 
-    return openRouterResposne.choices?.[0]?.message?.content?.toLowerCase().includes("yes") ? true : false;
+    return openRouterResponse.choices?.[0]?.message?.content?.toLowerCase().includes("yes") ? true : false;
 }

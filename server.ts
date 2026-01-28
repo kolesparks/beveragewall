@@ -40,11 +40,63 @@ function renderIndexPage({ uploadError, beverages }: {
 }
 
 
+function streamIndexPageWithBeverageList(pageProps: Partial<Parameters<typeof renderIndexPage>[0]>) {
+
+
+    const beverages = listBeverages(beverageStoreCtx, 0, 10);
+
+
+    const stream = new ReadableStream({
+        start: async function (controller) {
+
+            const renderedPageHtml = renderIndexPage({ beverages: [], ...pageProps });
+            const initialHtml = renderedPageHtml.slice(0, renderedPageHtml.indexOf("</ol>"));
+            controller.enqueue(initialHtml);
+
+            for (const beverage of beverages) {
+                const fileStream = beverage.file.stream();
+                controller.enqueue(beverageHtml.slice(0, beverageHtml.indexOf("$BEVERAGE_SRC")));
+                controller.enqueue(`data:image/jpeg;base64,`);
+
+                let carryover = new Uint8Array(0);
+                for await (const chunk of fileStream) {
+                    const combined = new Uint8Array(carryover.byteLength + chunk.byteLength);
+
+                    combined.set(carryover);
+                    combined.set(chunk, carryover.length);
+
+                    const encodableLength = Math.floor(combined.byteLength / 3) * 3;
+
+                    controller.enqueue(combined.slice(0, encodableLength).toBase64());
+
+
+                    carryover = combined.slice(encodableLength);
+                }
+
+                if (carryover.byteLength > 0) {
+                    controller.enqueue(carryover.toBase64());
+                }
+
+                controller.enqueue(beverageHtml.slice(beverageHtml.indexOf("$BEVERAGE_SRC") + "$BEVERAGE_SRC".length));
+            }
+
+            controller.close();
+        }
+    });
+
+    return new Response(stream, {
+        headers: {
+            "Content-Type": "text/html"
+        }
+    });
+}
+
 Bun.serve({
     hostname: host,
     port: port,
     routes: {
         "/": async function handler(req, res) {
+
 
             if (req.method === 'POST') {
                 const formData = await req.formData();
@@ -68,66 +120,20 @@ Bun.serve({
                 await rm(tmpIn.name as string);
                 // tmpOut is moved by beverage store
 
-                const isBeverageImage = await classifyIsBeverageImage(await image.bytes());
+                const isBeverageImage = await classifyIsBeverageImage(tmpOut);
 
                 if (!isBeverageImage) {
-                    return new Response(renderIndexPage({
-                        uploadError: "Picture must be of a beverage in hand or on a surface with a generic background."
-                    }), { headers: { "Content-Type": "text/html" } });
+                    return streamIndexPageWithBeverageList({
+                        uploadError: "Picture must be of a beverage in hand or on a surface with a generic background.",
+                    });
                 }
 
                 await storeBeverage(beverageStoreCtx, tmpOut);
 
-                // fall through to main list beverages render
+                return Response.redirect("/");
             }
 
-
-            const beverages = listBeverages(beverageStoreCtx, 0, 10);
-
-
-            const stream = new ReadableStream({
-                start: async function (controller) {
-
-                    const renderedPageHtml = renderIndexPage({ beverages: [] });
-                    const initialHtml = renderedPageHtml.slice(0, renderedPageHtml.indexOf("</ol>"));
-                    controller.enqueue(initialHtml);
-
-                    for (const beverage of beverages) {
-                        const fileStream = beverage.file.stream();
-                        controller.enqueue(beverageHtml.slice(0, beverageHtml.indexOf("$BEVERAGE_SRC")));
-                        controller.enqueue(`data:image/jpeg;base64,`);
-
-                        let carryover = new Uint8Array(0);
-                        for await (const chunk of fileStream) {
-                            const combined = new Uint8Array(carryover.byteLength + chunk.byteLength);
-
-                            combined.set(carryover);
-                            combined.set(chunk, carryover.length);
-
-                            const encodableLength = Math.floor(combined.byteLength / 3) * 3;
-
-                            controller.enqueue(combined.slice(0, encodableLength).toBase64());
-
-
-                            carryover = combined.slice(encodableLength);
-                        }
-
-                        if (carryover.byteLength > 0) {
-                            controller.enqueue(carryover.toBase64());
-                        }
-
-                        controller.enqueue(beverageHtml.slice(beverageHtml.indexOf("$BEVERAGE_SRC") + "$BEVERAGE_SRC".length));
-                    }
-
-                    controller.close();
-                }
-            });
-
-            return new Response(stream, {
-                headers: {
-                    "Content-Type": "text/html"
-                }
-            });
+            return streamIndexPageWithBeverageList({});
 
         },
     },
