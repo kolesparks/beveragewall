@@ -18,7 +18,7 @@
             position: fixed;
             bottom: 1.5em;
             right: 1.5em;
-            border: 1px solid #C9B59C;
+            border: 1px solid #000;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -26,6 +26,8 @@
             height: 3em;
             cursor: pointer;
             border-radius: 50%;
+            background-color: #EFE9E3;
+            box-shadow: #000;
         }
 
         ol {
@@ -37,6 +39,9 @@
         }
 
         li {
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             list-style: none;
             border: 1px solid #D9CFC7;
             border-radius: 5px;
@@ -58,25 +63,65 @@
             object-fit: contain;
             overflow: hidden;
         }
+
+
+        button {
+            border-radius: 5px;
+            border-width: 1px;
+            border-color: #000;
+            background-color: #D9CFC7;
+            padding: 1em;
+            width: 100%;
+            cursor: pointer;
+        }
+
+
+        .disclaimer {
+            font-size: 0.75em;
+            opacity: 0.54;
+        }
     </style>
+
+
 </head>
 
 <body>
     <main>
         <section>
-            <form action="/" method="post" enctype="multipart/form-data">
+            <form id="beverage-upload-form" action="/" method="post" enctype="multipart/form-data">
                 <label for="image-input" class="add-beverage-button">
                     +🍺
                 </label>
                 <input id="image-input" type="file" name="image" required />
-
-                <input id="file-upload" type="file" />
-                <button type="submit" hidden>Upload Beverage</button>
                 <p class="error">$UPLOAD_ERROR</p>
-                <p class="disclaimer" hidden>Your image is sent to <a href="https://openrouter.ai" target="_blank"
-                        rel="noreferrer">OpenRouter</a> for beverage detection.</p>
             </form>
             <ol>
+                <li id="preview-list-item" hidden>
+                    <img src="" />
+                    <p class="disclaimer">Images are sent to <a href="https://openrouter.ai" target="_blank"
+                            rel="noreferrer">OpenRouter</a> for beverage detection.</p>
+                    <button form="beverage-upload-form" type="submit">Upload Beverage</button>
+
+                </li>
+                <script>
+                    const imageInput = document.getElementById("image-input");
+                    const form = document.getElementById("beverage-upload-form");
+                    const previewListItem = document.getElementById("preview-list-item");
+                    const previewImg = previewListItem.querySelector("img");
+                    imageInput.addEventListener('change', (e) => {
+                        const [file] = imageInput.files;
+                        if (file) {
+                            previewListItem.hidden = false;
+                            previewListItem.style.display = 'flex';
+                            previewImg.src = URL.createObjectURL(file);
+                        }
+                    });
+
+                    form.addEventListener("submit", () => {
+                        const button = previewListItem.querySelector("button");
+                        button.textContent = "Uploading...";
+                    });
+                </script>
                 $BEVERAGES
             </ol>
             <nav>
