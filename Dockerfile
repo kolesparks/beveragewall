@@ -5,5 +5,7 @@ COPY . .
 RUN apt-get update && apt-get install -y \
     imagemagick --no-install-recommends
 
-CMD ['bun', './server.ts']
+RUN bun install
+
+CMD ["bun", "server.ts"]
 
