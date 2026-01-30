@@ -1,4 +1,4 @@
-FROM bun:1.3.8
+FROM oven/bun:latest
 
 COPY . .
 
