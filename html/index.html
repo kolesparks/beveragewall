@@ -160,6 +160,8 @@
         <input id="image-input" type="file" name="image" required />
     </form>
     $UPLOAD_ERROR
+
+    <canvas id="image-compression-canvas" hidden></canvas>
     <ol>
         <li id="preview-list-item" hidden>
             <img src="" />
@@ -173,12 +175,37 @@
             const form = document.getElementById("beverage-upload-form");
             const previewListItem = document.getElementById("preview-list-item");
             const previewImg = previewListItem.querySelector("img");
+            const canvas = document.getElementById("image-compression-canvas");
             imageInput.addEventListener('change', (e) => {
                 const [file] = imageInput.files;
                 if (file) {
                     previewListItem.hidden = false;
                     previewListItem.style.display = 'flex';
                     previewImg.src = URL.createObjectURL(file);
+
+                    if (file.size > 1024 * 1024) {
+                        canvas.src = previewImg.src;
+                        createImageBitmap(file).then(imageBitmap => {
+                            canvas.width = imageBitmap.width / 4;
+                            canvas.height = imageBitmap.height / 4;
+                            const scale = Math.min(canvas.width / imageBitmap.width, canvas.height / imageBitmap.height);
+                            const width = imageBitmap.width * scale;
+                            const height = imageBitmap.height * scale;
+                            const x = canvas.width / 2 - width / 2;
+                            const y = canvas.height / 2 - height / 2;
+
+                            canvas.getContext('2d').drawImage(imageBitmap, x, y, width, height)
+                            canvas.toBlob((blob) => {
+                                const file = new File([blob], "beverage.jpg", { type: "image/jpeg", lastModified: new Date().getTime() });
+                                const dt = new DataTransfer();
+
+                                dt.items.add(file);
+                                imageInput.files = dt.files;
+                            }, 'image/jpeg', 1);
+
+                        })
+                    }
+
                 }
             });
 
