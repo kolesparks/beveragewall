@@ -4,10 +4,26 @@
 <head>
     <title>Beverage Wall</title>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="Add your beverage to the wall." />
     <style>
+        html {
+            font-family: sans-serif;
+            font-optical-sizing: auto;
+            font-style: normal;
+            font-variation-settings:
+                "GRAD" 0;
+            overflow: hidden;
+            max-height: 100%;
+            height: 100%;
+        }
+
         body {
             background-color: #F9F8F6;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: auto;
         }
 
         form input[type="file"] {
@@ -35,7 +51,10 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            gap: 5px;
+            gap: 10px;
+            padding: 0;
+            margin: 0;
+            margin-top: 5px;
         }
 
         li {
@@ -78,7 +97,15 @@
 
         .disclaimer {
             font-size: 0.75em;
-            opacity: 0.54;
+            opacity: 0.81;
+        }
+
+
+        .error {
+            color: rgba(222, 56, 56, 0.694);
+            font-size: 1.5em;
+            font-weight: 500;
+            text-align: center;
         }
     </style>
 
@@ -86,49 +113,45 @@
 </head>
 
 <body>
-    <main>
-        <section>
-            <form id="beverage-upload-form" action="/" method="post" enctype="multipart/form-data">
-                <label for="image-input" class="add-beverage-button">
-                    +🍺
-                </label>
-                <input id="image-input" type="file" name="image" required />
-                <p class="error">$UPLOAD_ERROR</p>
-            </form>
-            <ol>
-                <li id="preview-list-item" hidden>
-                    <img src="" />
-                    <p class="disclaimer">Images are sent to <a href="https://openrouter.ai" target="_blank"
-                            rel="noreferrer">OpenRouter</a> for beverage detection.</p>
-                    <button form="beverage-upload-form" type="submit">Upload Beverage</button>
+    <form id="beverage-upload-form" action="/" method="post" enctype="multipart/form-data">
+        <label for="image-input" class="add-beverage-button">
+            +🍺
+        </label>
+        <input id="image-input" type="file" name="image" required />
+    </form>
+    $UPLOAD_ERROR
+    <ol>
+        <li id="preview-list-item" hidden>
+            <img src="" />
+            <p class="disclaimer">Images are sent to <a href="https://openrouter.ai" target="_blank"
+                    rel="noreferrer">OpenRouter</a> for beverage detection.</p>
+            <button form="beverage-upload-form" type="submit">Upload Beverage</button>
 
-                </li>
-                <script>
-                    const imageInput = document.getElementById("image-input");
-                    const form = document.getElementById("beverage-upload-form");
-                    const previewListItem = document.getElementById("preview-list-item");
-                    const previewImg = previewListItem.querySelector("img");
-                    imageInput.addEventListener('change', (e) => {
-                        const [file] = imageInput.files;
-                        if (file) {
-                            previewListItem.hidden = false;
-                            previewListItem.style.display = 'flex';
-                            previewImg.src = URL.createObjectURL(file);
-                        }
-                    });
+        </li>
+        <script>
+            const imageInput = document.getElementById("image-input");
+            const form = document.getElementById("beverage-upload-form");
+            const previewListItem = document.getElementById("preview-list-item");
+            const previewImg = previewListItem.querySelector("img");
+            imageInput.addEventListener('change', (e) => {
+                const [file] = imageInput.files;
+                if (file) {
+                    previewListItem.hidden = false;
+                    previewListItem.style.display = 'flex';
+                    previewImg.src = URL.createObjectURL(file);
+                }
+            });
 
-                    form.addEventListener("submit", () => {
-                        const button = previewListItem.querySelector("button");
-                        button.textContent = "Uploading...";
-                    });
-                </script>
-                $BEVERAGES
-            </ol>
-            <nav>
-                $PAGE_LINKS
-            </nav>
-        </section>
-    </main>
+            form.addEventListener("submit", () => {
+                const button = previewListItem.querySelector("button");
+                button.textContent = "Uploading...";
+            });
+        </script>
+        $BEVERAGES
+    </ol>
+    <nav>
+        $PAGE_LINKS
+    </nav>
 
     <footer>
         <p>

@@ -16,6 +16,6 @@ describe("process image", () => {
     test("check if jpg", async () => {
         const notAJpg = Bun.file('./tests/images/not-a-jpg.png');
         const processedImage = Bun.file('./tests/images/processed-image-tmp.jpg');
-        await expect(processImage(notAJpg, processedImage)).rejects.toThrowError('image is not a jpg');
+        await expect(processImage(notAJpg, processedImage)).resolves.toBeFalse();
     })
 });

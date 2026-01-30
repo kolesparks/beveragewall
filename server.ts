@@ -36,7 +36,7 @@ function renderIndexPage({ uploadError, beverages }: {
     return indexPageHtml
         .replace("$PAGE_LINKS", [].join("\n"))
         .replace("$BEVERAGES", beverages?.map((b) => renderBeverage(b)).join("\n") || "")
-        .replace("$UPLOAD_ERROR", escapeHTML(uploadError || ""));
+        .replace("$UPLOAD_ERROR", uploadError ? `<p class="error">${escapeHTML(uploadError || "")}</p>` : "");
 }
 
 
@@ -97,7 +97,6 @@ Bun.serve({
     routes: {
         "/": async function handler(req, res) {
 
-
             if (req.method === 'POST') {
                 const formData = await req.formData();
 
@@ -115,7 +114,13 @@ Bun.serve({
 
                 tmpIn.write(await image.bytes());
 
-                await processImage(tmpIn, tmpOut);
+                const successfullyProcessed = await processImage(tmpIn, tmpOut);
+
+                if (!successfullyProcessed) {
+                    return streamIndexPageWithBeverageList({
+                        uploadError: "Failed to process image. Image must be a valid jpg",
+                    })
+                }
 
                 await rm(tmpIn.name as string);
                 // tmpOut is moved by beverage store
@@ -132,6 +137,7 @@ Bun.serve({
 
                 return Response.redirect("/");
             }
+
 
             return streamIndexPageWithBeverageList({});
 
