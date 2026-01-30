@@ -1,5 +1,5 @@
 import { mkdir } from "node:fs/promises";
-import { listBeverages, setupBeverageStore, storeBeverage } from "./lib/beverage-store";
+import { countBeverages, listBeverages, setupBeverageStore, storeBeverage } from "./lib/beverage-store";
 import { processImage } from "./lib/process-image";
 import { escapeHTML, randomUUIDv7 } from "bun";
 import { rm } from "node:fs/promises";
@@ -21,35 +21,48 @@ const beverageStoreCtx = setupBeverageStore('./data/beverages.db');
 
 const indexPageHtml = await Bun.file("./html/index.html").text();
 const beverageHtml = await Bun.file("./html/beverage.html").text();
+const pageLinkHtml = await Bun.file("./html/page-link.html").text();
+const errorHtml = await Bun.file("./html/error.html").text();
 
 
 function renderBeverage({ src }: { src: string }) {
     return beverageHtml.replace("$BEVERAGE_SRC", src);
 }
 
+function renderPageLink({ url, number, current }: { url: string; number: number, current: boolean }) {
+    return pageLinkHtml.replace("$PAGE_URL", url).replace("$PAGE_NUMBER", escapeHTML(number)).replace("$PAGE_CURRENT", current ? "true" : "")
+}
 
-function renderIndexPage({ uploadError, beverages }: {
+function renderError({ message }: { message: string }) {
+    return errorHtml.replace("$ERROR_MESSAGE", escapeHTML(message));
+}
+
+function renderIndexPage({ uploadError, beverages, pageLinks }: {
     uploadError?: string;
-    beverages?: { src: string }[]
+    beverages?: { src: string }[],
+    pageLinks: { url: string; number: number; current: boolean }[]
 }) {
 
     return indexPageHtml
-        .replace("$PAGE_LINKS", [].join("\n"))
+        .replace("$PAGE_LINKS", pageLinks.map((p) => renderPageLink(p)).join("\n"))
         .replace("$BEVERAGES", beverages?.map((b) => renderBeverage(b)).join("\n") || "")
-        .replace("$UPLOAD_ERROR", uploadError ? `<p class="error">${escapeHTML(uploadError || "")}</p>` : "");
+        .replace("$UPLOAD_ERROR", uploadError ? renderError({ message: uploadError }) : "");
 }
 
 
-function streamIndexPageWithBeverageList(pageProps: Partial<Parameters<typeof renderIndexPage>[0]>) {
+function streamIndexPageWithBeverageList({ uploadError, currentPage: currentPageInput }: { uploadError?: string, currentPage: number }) {
 
-
-    const beverages = listBeverages(beverageStoreCtx, 0, 10);
-
+    const pageSize = 10;
+    const count = countBeverages(beverageStoreCtx);
+    const pageCount = Math.ceil(count / pageSize);
+    const currentPage = Math.max(1, Math.min(pageCount, currentPageInput));
+    const beverages = listBeverages(beverageStoreCtx, (count + 1) - ((currentPage - 1) * pageSize), pageSize);
+    const pageLinks = Array.from({ length: pageCount }).map((_, i) => ({ url: `/?page=${i + 1}`, number: i + 1, current: currentPage === i + 1 }));
 
     const stream = new ReadableStream({
         start: async function (controller) {
 
-            const renderedPageHtml = renderIndexPage({ beverages: [], ...pageProps });
+            const renderedPageHtml = renderIndexPage({ beverages: [], pageLinks: pageLinks, uploadError });
             const initialHtml = renderedPageHtml.slice(0, renderedPageHtml.indexOf("</ol>"));
             controller.enqueue(initialHtml);
 
@@ -80,6 +93,12 @@ function streamIndexPageWithBeverageList(pageProps: Partial<Parameters<typeof re
                 controller.enqueue(beverageHtml.slice(beverageHtml.indexOf("$BEVERAGE_SRC") + "$BEVERAGE_SRC".length));
             }
 
+
+
+            controller.enqueue(
+                renderedPageHtml.slice(renderedPageHtml.indexOf("</ol>"))
+            );
+
             controller.close();
         }
     });
@@ -96,6 +115,10 @@ Bun.serve({
     port: port,
     routes: {
         "/": async function handler(req, res) {
+
+            const pageParam = new URL(req.url).searchParams.get("page");
+
+            const currentPage = Number(Number.isNaN(pageParam) ? 1 : pageParam);
 
             if (req.method === 'POST') {
                 const formData = await req.formData();
@@ -119,6 +142,7 @@ Bun.serve({
                 if (!successfullyProcessed) {
                     return streamIndexPageWithBeverageList({
                         uploadError: "Failed to process image. Image must be a valid jpg",
+                        currentPage
                     })
                 }
 
@@ -130,6 +154,7 @@ Bun.serve({
                 if (!isBeverageImage) {
                     return streamIndexPageWithBeverageList({
                         uploadError: "Picture must be of a beverage in hand or on a surface with a generic background.",
+                        currentPage
                     });
                 }
 
@@ -139,7 +164,9 @@ Bun.serve({
             }
 
 
-            return streamIndexPageWithBeverageList({});
+            return streamIndexPageWithBeverageList({
+                currentPage
+            });
 
         },
     },
