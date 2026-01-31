@@ -6,19 +6,19 @@ import { rm } from "node:fs/promises";
 import { classifyIsBeverageImage } from "./lib/classify-image";
 import { createRateLimit } from "./lib/rate-limit";
 
-await mkdir("data", {
+await mkdir("./data", {
     recursive: true,
 });
 
-await rm("data/tmp", { recursive: true }).catch(() => null);
-await mkdir("data/tmp", { recursive: true });
-await mkdir("data/images", { recursive: true });
+await rm("./data/tmp", { recursive: true }).catch(() => null);
+await mkdir("./data/tmp", { recursive: true });
+await mkdir("./data/images", { recursive: true });
 
 
 const host = process.env.PORT ? "0.0.0.0" : "localhost";
 const port = Number(process.env.PORT || 3000);
 const MAX_IMAGE_SIZE_BYTES = (1024 * 1024);
-const beverageStoreCtx = setupBeverageStore('data/beverages.db');
+const beverageStoreCtx = setupBeverageStore('./data/beverages.db');
 
 const indexPageHtml = await Bun.file("./html/index.html").text();
 const beverageHtml = await Bun.file("./html/beverage.html").text();
@@ -145,8 +145,8 @@ Bun.serve({
                     }
 
                     const tmpId = randomUUIDv7();
-                    const tmpIn = Bun.file(`data/tmp/image-in-${tmpId}.jpg`);
-                    const tmpOut = Bun.file(`data/tmp/image-out-${tmpId}.jpg`);
+                    const tmpIn = Bun.file(`./data/tmp/image-in-${tmpId}.jpg`);
+                    const tmpOut = Bun.file(`./data/tmp/image-out-${tmpId}.jpg`);
 
                     tmpIn.write(await image.bytes());
 

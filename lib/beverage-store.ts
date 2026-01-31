@@ -41,7 +41,7 @@ export async function storeBeverage(ctx: BeverageStoreCtx, tmpImagefile: BunFile
         throw new Error('storeBeverage failed because tmpImageFile has no name');
     }
 
-    await rename(tmpImagefile.name!, `data/images/${res.rowid}.jpg`);
+    await rename(tmpImagefile.name!, `./data/images/${res.rowid}.jpg`);
 
 
     return res.rowid;
@@ -49,7 +49,7 @@ export async function storeBeverage(ctx: BeverageStoreCtx, tmpImagefile: BunFile
 
 export async function getBeverage(ctx: BeverageStoreCtx, rowid: number) {
     return {
-        file: Bun.file(`data/images/${rowid}.jpg`),
+        file: Bun.file(`./data/images/${rowid}.jpg`),
         meta: ctx.queries.selectBeverage.get(rowid)
     }
 }
@@ -62,7 +62,7 @@ export function listBeverages(ctx: BeverageStoreCtx, beforeRowId: number, limit:
 
 
     return rows.map((r) => ({
-        file: Bun.file(`data/images/${r.rowid}.jpg`),
+        file: Bun.file(`./data/images/${r.rowid}.jpg`),
         meta: r,
     }))
 }
