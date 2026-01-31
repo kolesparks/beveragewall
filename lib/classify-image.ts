@@ -62,7 +62,7 @@ export async function classifyIsBeverageImage(image: BunFile) {
                     content: [
                         {
                             type: 'text',
-                            text: "Is this image SOLEY of a beverage (e.g. water, beer, wine, soda, coffee), held in a hand(s) OR placed on surface (e.g. table, window, bar), in front of a generic backdrop (e.g. wall, floor, sky, building), and does NOT include the face of any person? Answer 'yes' if so, or 'no' if not."
+                            text: "Is this image of a beverage (e.g. water, beer, wine, soda, coffee), held in a hand(s) OR placed on surface (e.g. table, window, bar), in front of a neutral backdrop (e.g. wall, floor, sky, building), and does NOT include the face of any person? Answer 'yes' if so, or 'no' if not."
                         },
                         {
                             type: 'image_url',

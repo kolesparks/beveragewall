@@ -33,8 +33,8 @@
 
         .add-beverage-button {
             position: fixed;
-            bottom: 1.5em;
-            right: 1.5em;
+            bottom: 2.5em;
+            right: 2em;
             border: 1px solid var(--font-color);
             display: flex;
             align-items: center;
@@ -54,7 +54,7 @@
             gap: 10px;
             padding: 0;
             margin: 0;
-            margin-top: 5px;
+            margin-top: 1em;
         }
 
         li {
@@ -92,6 +92,7 @@
             padding: 1em;
             width: 100%;
             cursor: pointer;
+            color: var(--font-color);
         }
 
 
@@ -128,6 +129,22 @@
             text-decoration: underline;
         }
 
+        #image-compression-canvas {
+            /* attempt to prevent overlay bug on android by removing canvas completely out of viewport*/
+            display: none;
+            position: absolute;
+            left: -200vw;
+        }
+
+
+        footer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5em;
+        }
+
         @media (prefers-color-scheme: light) {
             :root {
                 --bg-color: #F9F8F6;
@@ -145,6 +162,14 @@
                 --fg-color: #31363F;
                 --primary-color: #3d434e;
                 --error-color: rgba(222, 56, 56, 0.694);
+            }
+
+            a:visited {
+                color: #76ABAE;
+            }
+
+            a {
+                color: #87c3c6;
             }
         }
     </style>
@@ -188,6 +213,7 @@
                         createImageBitmap(file).then(imageBitmap => {
                             canvas.width = imageBitmap.width / 4;
                             canvas.height = imageBitmap.height / 4;
+                            canvas.hidden = true;
                             const scale = Math.min(canvas.width / imageBitmap.width, canvas.height / imageBitmap.height);
                             const width = imageBitmap.width * scale;
                             const height = imageBitmap.height * scale;
@@ -219,7 +245,7 @@
     <nav>
         $PAGE_LINKS
     </nav>
-    <!-- 
+
     <footer>
         <p>
             Hand crafted by <a href="https://kolesparks.com" target="_blank" rel="noreferrer">Kole Sparks</a>. Open
@@ -227,7 +253,7 @@
                 rel="noreferrer">GitHub</a>. Hosted on <a href="https://railway.com?referralCode=ABSfL6"
                 rel="noreferrer">Railway</a>.
         </p>
-    </footer> -->
+    </footer>
 </body>
 
 </html>

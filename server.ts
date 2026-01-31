@@ -4,6 +4,7 @@ import { processImage } from "./lib/process-image";
 import { escapeHTML, randomUUIDv7 } from "bun";
 import { rm } from "node:fs/promises";
 import { classifyIsBeverageImage } from "./lib/classify-image";
+import { createRateLimit } from "./lib/rate-limit";
 
 await mkdir("./data", {
     recursive: true,
@@ -23,6 +24,9 @@ const indexPageHtml = await Bun.file("./html/index.html").text();
 const beverageHtml = await Bun.file("./html/beverage.html").text();
 const pageLinkHtml = await Bun.file("./html/page-link.html").text();
 const errorHtml = await Bun.file("./html/error.html").text();
+
+const writeLimit = createRateLimit({ limit: 10, windowSeconds: 60 });
+const readLimit = createRateLimit({ limit: 240, windowSeconds: 60 });
 
 
 function renderBeverage({ src }: { src: string }) {
@@ -104,6 +108,7 @@ function streamIndexPageWithBeverageList({ uploadError, currentPage: currentPage
     });
 
     return new Response(stream, {
+        status: uploadError ? 400 : 200,
         headers: {
             "Content-Type": "text/html"
         }
@@ -116,57 +121,79 @@ Bun.serve({
     routes: {
         "/": async function handler(req, res) {
 
-            const pageParam = new URL(req.url).searchParams.get("page");
+            try {
+                const pageParam = new URL(req.url).searchParams.get("page");
 
-            const currentPage = Number(Number.isNaN(pageParam) ? 1 : pageParam);
+                const currentPage = Number(Number.isNaN(pageParam) ? 1 : pageParam);
 
-            if (req.method === 'POST') {
-                const formData = await req.formData();
+                if (req.method === 'POST') {
 
-                const image = formData.get("image");
+                    if (writeLimit()) {
+                        return new Response("Too many uploads", {
+                            status: 429
+                        });
+                    }
 
-                if (!(image instanceof Blob)) {
-                    return new Response("expected an image file", { status: 400 });
-                } else if (image.size > MAX_IMAGE_SIZE_BYTES) {
-                    return new Response("image cannot be larger than 1mb", { status: 400 });
+                    const formData = await req.formData();
+
+                    const image = formData.get("image");
+
+                    if (!(image instanceof Blob)) {
+                        return new Response("expected an image file", { status: 400 });
+                    } else if (image.size > MAX_IMAGE_SIZE_BYTES) {
+                        return new Response("image cannot be larger than 1mb", { status: 400 });
+                    }
+
+                    const tmpId = randomUUIDv7();
+                    const tmpIn = Bun.file(`./data/tmp/image-in-${tmpId}.jpg`);
+                    const tmpOut = Bun.file(`./data/tmp/image-out-${tmpId}.jpg`);
+
+                    tmpIn.write(await image.bytes());
+
+                    const successfullyProcessed = await processImage(tmpIn, tmpOut);
+
+                    if (!successfullyProcessed) {
+                        return streamIndexPageWithBeverageList({
+                            uploadError: "Failed to process image. Image must be a valid jpg",
+                            currentPage
+                        })
+                    }
+
+                    await rm(tmpIn.name as string);
+                    // tmpOut is moved by beverage store
+
+                    const isBeverageImage = await classifyIsBeverageImage(tmpOut);
+
+                    if (!isBeverageImage) {
+                        return streamIndexPageWithBeverageList({
+                            uploadError: "Picture must be of a beverage in hand or on a surface with a generic background.",
+                            currentPage
+                        });
+                    }
+
+                    await storeBeverage(beverageStoreCtx, tmpOut);
+
+                    return Response.redirect("/");
+                } else {
+
+                    if (readLimit()) {
+                        return new Response("Too mutch traffic", {
+                            status: 429
+                        });
+                    }
                 }
 
-                const tmpId = randomUUIDv7();
-                const tmpIn = Bun.file(`./data/tmp/image-in-${tmpId}.jpg`);
-                const tmpOut = Bun.file(`./data/tmp/image-out-${tmpId}.jpg`);
 
-                tmpIn.write(await image.bytes());
+                return streamIndexPageWithBeverageList({
+                    currentPage
+                });
+            } catch (e) {
+                console.error(e);
 
-                const successfullyProcessed = await processImage(tmpIn, tmpOut);
-
-                if (!successfullyProcessed) {
-                    return streamIndexPageWithBeverageList({
-                        uploadError: "Failed to process image. Image must be a valid jpg",
-                        currentPage
-                    })
-                }
-
-                await rm(tmpIn.name as string);
-                // tmpOut is moved by beverage store
-
-                const isBeverageImage = await classifyIsBeverageImage(tmpOut);
-
-                if (!isBeverageImage) {
-                    return streamIndexPageWithBeverageList({
-                        uploadError: "Picture must be of a beverage in hand or on a surface with a generic background.",
-                        currentPage
-                    });
-                }
-
-                await storeBeverage(beverageStoreCtx, tmpOut);
-
-                return Response.redirect("/");
+                return new Response("Server error 😭", {
+                    status: 500,
+                });
             }
-
-
-            return streamIndexPageWithBeverageList({
-                currentPage
-            });
 
         },
     },
