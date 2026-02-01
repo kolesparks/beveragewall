@@ -182,7 +182,7 @@
         <label for="image-input" class="add-beverage-button">
             +🍺
         </label>
-        <input id="image-input" type="file" name="image" capture="camera" accept="image/*" required />
+        <input id="image-input" type="file" name="image" accept="image/*" required />
     </form>
     $UPLOAD_ERROR
 
@@ -208,11 +208,15 @@
                     previewListItem.style.display = 'flex';
                     previewImg.src = URL.createObjectURL(file);
 
-                    if (file.size > 1024 * 1024) {
+                    const MAX_BYTES = 1024 * 1024;
+                    if (file.size > MAX_BYTES) {
                         canvas.src = previewImg.src;
+                        const reduction = Math.ceil(file.size / MAX_BYTES);
                         createImageBitmap(file).then(imageBitmap => {
-                            canvas.width = imageBitmap.width / 4;
-                            canvas.height = imageBitmap.height / 4;
+                            const bytesPerPixel = 4;
+                            const aspectRatio = imageBitmap.width / imageBitmap.height;
+                            canvas.width = Math.sqrt((MAX_BYTES / bytesPerPixel) * aspectRatio);
+                            canvas.height = Math.sqrt((MAX_BYTES / bytesPerPixel) / aspectRatio);
                             canvas.hidden = true;
                             const scale = Math.min(canvas.width / imageBitmap.width, canvas.height / imageBitmap.height);
                             const width = imageBitmap.width * scale;

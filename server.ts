@@ -197,7 +197,7 @@ Bun.serve({
 
         },
     },
-    maxRequestBodySize: MAX_IMAGE_SIZE_BYTES * 1.5
+    maxRequestBodySize: MAX_IMAGE_SIZE_BYTES * 2
 })
 
 
