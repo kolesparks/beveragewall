@@ -49,7 +49,7 @@ export async function storeBeverage(ctx: BeverageStoreCtx, tmpImagefile: BunFile
 
 export async function getBeverage(ctx: BeverageStoreCtx, rowid: number) {
     return {
-        file: Bun.file(`./data/images/${rowid}.jpg`),
+        file: getFile(rowid),
         meta: ctx.queries.selectBeverage.get(rowid)
     }
 }
@@ -62,11 +62,24 @@ export function listBeverages(ctx: BeverageStoreCtx, beforeRowId: number, limit:
 
 
     return rows.map((r) => ({
-        file: Bun.file(`./data/images/${r.rowid}.jpg`),
+        file: getFile(r.rowid),
         meta: r,
     }))
 }
 
 export function countBeverages(ctx: BeverageStoreCtx) {
     return ctx.queries.countBeverages.get()?.count || 0;
+}
+
+export async function removeBeverage(ctx: BeverageStoreCtx, id: number) {
+    ctx.db.run('DELETE FROM beverages WHERE rowid = ?', [id]);
+
+    const file = getFile(id);
+
+    await file.delete();
+}
+
+
+function getFile(rowid: number) {
+    return Bun.file(`./data/images/${rowid}.jpg`);
 }

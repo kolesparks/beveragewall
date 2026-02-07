@@ -1,10 +1,11 @@
 import { mkdir } from "node:fs/promises";
-import { countBeverages, listBeverages, setupBeverageStore, storeBeverage } from "./lib/beverage-store";
+import { countBeverages, listBeverages, removeBeverage, setupBeverageStore, storeBeverage } from "./lib/beverage-store";
 import { processImage } from "./lib/process-image";
 import { escapeHTML, randomUUIDv7 } from "bun";
 import { rm } from "node:fs/promises";
 import { classifyIsBeverageImage } from "./lib/classify-image";
 import { createRateLimit } from "./lib/rate-limit";
+import { timingSafeEqual } from "node:crypto";
 
 await mkdir("./data", {
     recursive: true,
@@ -24,13 +25,18 @@ const indexPageHtml = await Bun.file("./html/index.html").text();
 const beverageHtml = await Bun.file("./html/beverage.html").text();
 const pageLinkHtml = await Bun.file("./html/page-link.html").text();
 const errorHtml = await Bun.file("./html/error.html").text();
+const beverageDeleteFormHtml = await Bun.file("./html/beverage-delete-form.html").text();
 
 const writeLimit = createRateLimit({ limit: 10, windowSeconds: 60 });
 const readLimit = createRateLimit({ limit: 240, windowSeconds: 60 });
 
 
-function renderBeverage({ src }: { src: string }) {
-    return beverageHtml.replace("$BEVERAGE_SRC", src);
+function renderBeverage({ src, deleteForm }: { src: string, deleteForm?: string }) {
+    return beverageHtml.replace("$BEVERAGE_SRC", src).replace("$BEVERAGE_DELETE_FORM", deleteForm || "")
+}
+
+function renderBeverageDeleteForm({ beverageId }: { beverageId: number }) {
+    return beverageDeleteFormHtml.replace("$BEVERAGE_ID", beverageId.toString());
 }
 
 function renderPageLink({ url, number, current }: { url: string; number: number, current: boolean }) {
@@ -43,7 +49,7 @@ function renderError({ message }: { message: string }) {
 
 function renderIndexPage({ uploadError, beverages, pageLinks }: {
     uploadError?: string;
-    beverages?: { src: string }[],
+    beverages?: { src: string; }[],
     pageLinks: { url: string; number: number; current: boolean }[]
 }) {
 
@@ -54,7 +60,7 @@ function renderIndexPage({ uploadError, beverages, pageLinks }: {
 }
 
 
-function streamIndexPageWithBeverageList({ uploadError, currentPage: currentPageInput }: { uploadError?: string, currentPage: number }) {
+function streamIndexPageWithBeverageList({ uploadError, currentPage: currentPageInput, showBeverageDeleteForm }: { uploadError?: string, currentPage: number, showBeverageDeleteForm: boolean }) {
 
     const pageSize = 10;
     const count = countBeverages(beverageStoreCtx);
@@ -94,10 +100,11 @@ function streamIndexPageWithBeverageList({ uploadError, currentPage: currentPage
                     controller.enqueue(carryover.toBase64());
                 }
 
-                controller.enqueue(beverageHtml.slice(beverageHtml.indexOf("$BEVERAGE_SRC") + "$BEVERAGE_SRC".length));
+                controller.enqueue(
+                    beverageHtml.slice(
+                        beverageHtml.indexOf("$BEVERAGE_SRC") + "$BEVERAGE_SRC".length)
+                        .replace("$BEVERAGE_DELETE_FORM", showBeverageDeleteForm ? renderBeverageDeleteForm({ beverageId: beverage.meta.rowid }) : ""));
             }
-
-
 
             controller.enqueue(
                 renderedPageHtml.slice(renderedPageHtml.indexOf("</ol>"))
@@ -115,14 +122,60 @@ function streamIndexPageWithBeverageList({ uploadError, currentPage: currentPage
     });
 }
 
+
+
 Bun.serve({
     hostname: host,
     port: port,
     routes: {
-        "/": async function handler(req, res) {
+        "/beverages/delete": async function handler(req, res) {
+
+            if (writeLimit()) {
+                return new Response("Too many attempts", {
+                    status: 429
+                });
+            }
+
+            const formData = await req.formData();
+
+            const password = formData.get("password")?.valueOf();
+            const beverageId = formData.get("beverageId");
+
+            if (!password || typeof password !== 'string' || !beverageId || Number.isNaN(Number(beverageId))) {
+                return new Response("Invalid inputs", {
+                    status: 401,
+                });
+            }
+
 
             try {
-                const pageParam = new URL(req.url).searchParams.get("page");
+                if (!process.env.ADMIN_PASSWORD) {
+                    throw new Error("ADMIN_PASSWORD not defined");
+                }
+                if (!timingSafeEqual(Buffer.from(process.env.ADMIN_PASSWORD, "utf-8"), Buffer.from(password, "utf-8"))) {
+                    return new Response("Uauthorized", {
+                        status: 400,
+                    });
+                }
+
+
+                await removeBeverage(beverageStoreCtx, Number(beverageId));
+
+
+                return Response.redirect("/");
+
+            } catch (e) {
+                console.error(e);
+                return new Response("Server Error", {
+                    status: 500,
+                });
+            }
+        },
+        "/": async function handler(req) {
+
+            try {
+                const searchParams = new URL(req.url).searchParams;
+                const pageParam = searchParams.get("page");
 
                 const currentPage = Number(Number.isNaN(pageParam) ? 1 : pageParam);
 
@@ -155,7 +208,8 @@ Bun.serve({
                     if (!successfullyProcessed) {
                         return streamIndexPageWithBeverageList({
                             uploadError: "Failed to process image. Image must be a valid jpg",
-                            currentPage
+                            currentPage,
+                            showBeverageDeleteForm: false,
                         })
                     }
 
@@ -167,7 +221,8 @@ Bun.serve({
                     if (!isBeverageImage) {
                         return streamIndexPageWithBeverageList({
                             uploadError: "Picture must be of a beverage in hand or on a surface with a generic background.",
-                            currentPage
+                            currentPage,
+                            showBeverageDeleteForm: false,
                         });
                     }
 
@@ -185,7 +240,8 @@ Bun.serve({
 
 
                 return streamIndexPageWithBeverageList({
-                    currentPage
+                    currentPage,
+                    showBeverageDeleteForm: searchParams.has("admin")
                 });
             } catch (e) {
                 console.error(e);

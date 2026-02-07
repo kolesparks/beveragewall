@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeAll } from "bun:test";
-import { getBeverage, listBeverages, setupBeverageStore, storeBeverage } from "../lib/beverage-store";
+import { getBeverage, listBeverages, removeBeverage, setupBeverageStore, storeBeverage } from "../lib/beverage-store";
 
 
 describe("beverage store", () => {
@@ -37,5 +37,24 @@ describe("beverage store", () => {
         expect(beverages[0]?.file.size).toEqual(srcFile.size);
         expect(beverages[0]?.meta.rowid).toEqual(1);
 
+    });
+
+
+    test("remove beverage", async () => {
+        const srcFile = Bun.file('./tests/images/processed-image.jpg');
+        const tmpFile = Bun.file('./tests/images/processed-image-tmp.jpg');
+
+        await tmpFile.write(await srcFile.bytes());
+
+        const ctx = setupBeverageStore(':memory:');
+
+        const id = await storeBeverage(ctx, tmpFile);
+
+
+        await removeBeverage(ctx, id);
+
+        const retrieved = await getBeverage(ctx, id);
+
+        expect(retrieved).toBeNull();
     });
 })
