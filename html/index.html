@@ -254,6 +254,8 @@
             const previewImg = previewListItem.querySelector("img");
             const canvas = document.getElementById("image-compression-canvas");
             imageInput.addEventListener('change', (e) => {
+                form?.scrollIntoView({ block: 'start', behavior: 'instant' });
+
                 const [file] = imageInput.files;
                 if (file) {
                     previewListItem.hidden = false;
