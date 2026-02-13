@@ -58,6 +58,7 @@
         }
 
         li {
+            position: relative;
             flex-direction: column;
             align-items: center;
             justify-content: center;
@@ -145,6 +146,35 @@
             margin-bottom: 1.5em;
         }
 
+        .star-group {
+            display: flex;
+            flex-direction: row-reverse;
+            padding-bottom: 1em;
+        }
+
+        .star input[type="radio"] {
+            appearance: none;
+        }
+
+        .star {
+            opacity: 0.3;
+            font-size: 2em;
+            cursor: pointer;
+        }
+
+        .star:has(input[type="radio"]:checked),
+        .star:has(input[type="radio"]:checked)~.star {
+            opacity: 1;
+        }
+
+        .beverage-stars {
+            position: absolute;
+            bottom: 0;
+            left: 0.25em;
+        }
+
+
+
         @media (prefers-color-scheme: light) {
             :root {
                 --bg-color: #F9F8F6;
@@ -190,10 +220,32 @@
     <ol>
         <li id="preview-list-item" hidden>
             <img src="" />
+
+            <div class="star-group">
+                <label class="star">
+                    <input type="radio" form="beverage-upload-form" id="star5" name="stars" value="5">
+                    ⭐️
+                </label>
+                <label class="star">
+                    <input type="radio" form="beverage-upload-form" id="star4" name="stars" value="4">
+                    ⭐️
+                </label>
+                <label class="star">
+                    <input type="radio" form="beverage-upload-form" id="star3" name="stars" value="3">
+                    ⭐️
+                </label>
+                <label class="star">
+                    <input type="radio" form="beverage-upload-form" id="star2" name="stars" value="2">
+                    ⭐️
+                </label>
+                <label class="star">
+                    <input type="radio" form="beverage-upload-form" id="star1" name="stars" value="1">
+                    ⭐️
+                </label>
+            </div>
+            <button form="beverage-upload-form" type="submit">Upload Beverage</button>
             <p class="disclaimer">Images are sent to <a href="https://openrouter.ai" target="_blank"
                     rel="noreferrer">OpenRouter</a> for beverage detection.</p>
-            <button form="beverage-upload-form" type="submit">Upload Beverage</button>
-
         </li>
         <script>
             const imageInput = document.getElementById("image-input");

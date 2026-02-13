@@ -13,10 +13,21 @@ export function setupBeverageStore(path: string) {
         )
     `);
 
+    try {
+        db.run(`ALTER TABLE beverages ADD COLUMN stars INT`);
+    } catch (e: unknown) {
+        if (e instanceof Error && e?.message.includes("duplicate column name")) {
+            //ignore
+        } else {
+            throw e;
+        }
 
-    const insertBeverage = db.query('insert into beverages (created_at) VALUES (?) RETURNING rowid');
-    const selectBeverage = db.query('select created_at from beverages where rowid = ?');
-    const selectBeverages = db.query<{ rowid: number, created_at: string }, [number, number]>('select rowid,created_at from beverages where rowid < ? order by rowid desc limit ?');
+    }
+
+
+    const insertBeverage = db.query('insert into beverages (created_at,stars) VALUES (?, ?) RETURNING rowid');
+    const selectBeverage = db.query('select created_at,stars from beverages where rowid = ?');
+    const selectBeverages = db.query<{ rowid: number, created_at: string, stars: number | null }, [number, number]>('select rowid,created_at,stars from beverages where rowid < ? order by rowid desc limit ?');
     const countBeverages = db.query<{ count: number }, []>('select count(1) as count from beverages');
 
     return {
@@ -33,8 +44,8 @@ export function setupBeverageStore(path: string) {
 export type BeverageStoreCtx = ReturnType<typeof setupBeverageStore>;
 
 
-export async function storeBeverage(ctx: BeverageStoreCtx, tmpImagefile: BunFile) {
-    const res = ctx.queries.insertBeverage.get(new Date().toISOString()) as { rowid: number };
+export async function storeBeverage(ctx: BeverageStoreCtx, tmpImagefile: BunFile, stars: number) {
+    const res = ctx.queries.insertBeverage.get(new Date().toISOString(), stars) as { rowid: number };
 
 
     if (!tmpImagefile.name) {

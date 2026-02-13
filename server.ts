@@ -31,8 +31,32 @@ const writeLimit = createRateLimit({ limit: 10, windowSeconds: 60 });
 const readLimit = createRateLimit({ limit: 240, windowSeconds: 60 });
 
 
-function renderBeverage({ src, deleteForm }: { src: string, deleteForm?: string }) {
-    return beverageHtml.replace("$BEVERAGE_SRC", src).replace("$BEVERAGE_DELETE_FORM", deleteForm || "")
+function renderBeverage({ src, deleteForm, stars }: { src: string, deleteForm?: string, stars?: string }) {
+    return beverageHtml.replace("$BEVERAGE_SRC", src).replace("$BEVERAGE_DELETE_FORM", deleteForm || "").replace("$BEVERAGE_STARS", stars || "");
+}
+
+function renderStars(count: number) {
+    if (count === 0) {
+        return "";
+    }
+    if (count === 1) {
+        return "⭐️";
+    }
+    if (count === 2) {
+        return "⭐️⭐️";
+    }
+    if (count === 3) {
+        return "⭐️⭐️⭐️";
+    }
+    if (count === 4) {
+        return "⭐️⭐️⭐️⭐️";
+    }
+    if (count === 5) {
+        return "⭐️⭐️⭐️⭐️⭐️";
+    }
+
+    return "";
+
 }
 
 function renderBeverageDeleteForm({ beverageId }: { beverageId: number }) {
@@ -103,7 +127,9 @@ function streamIndexPageWithBeverageList({ uploadError, currentPage: currentPage
                 controller.enqueue(
                     beverageHtml.slice(
                         beverageHtml.indexOf("$BEVERAGE_SRC") + "$BEVERAGE_SRC".length)
-                        .replace("$BEVERAGE_DELETE_FORM", showBeverageDeleteForm ? renderBeverageDeleteForm({ beverageId: beverage.meta.rowid }) : ""));
+                        .replace("$BEVERAGE_DELETE_FORM", showBeverageDeleteForm ? renderBeverageDeleteForm({ beverageId: beverage.meta.rowid }) : "")
+                        .replace("$BEVERAGE_STARS", renderStars(beverage.meta.stars || 0))
+                )
             }
 
             controller.enqueue(
@@ -190,6 +216,11 @@ Bun.serve({
                     const formData = await req.formData();
 
                     const image = formData.get("image");
+                    let stars = Math.max(0, Math.min(5, Number(formData.get("stars"))));
+
+                    if (Number.isNaN(stars)) {
+                        stars = 0;
+                    }
 
                     if (!(image instanceof Blob)) {
                         return new Response("expected an image file", { status: 400 });
@@ -226,7 +257,7 @@ Bun.serve({
                         });
                     }
 
-                    await storeBeverage(beverageStoreCtx, tmpOut);
+                    await storeBeverage(beverageStoreCtx, tmpOut, stars);
 
                     return Response.redirect("/");
                 } else {
