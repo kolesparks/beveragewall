@@ -24,11 +24,23 @@ export function setupBeverageStore(path: string) {
 
     }
 
+    try {
+        db.run(`ALTER TABLE beverages ADD COLUMN cheers INT`);
+    } catch (e: unknown) {
+        if (e instanceof Error && e?.message.includes("duplicate column name")) {
+            //ignore
+        } else {
+            throw e;
+        }
 
-    const insertBeverage = db.query('insert into beverages (created_at,stars) VALUES (?, ?) RETURNING rowid');
-    const selectBeverage = db.query('select created_at,stars from beverages where rowid = ?');
-    const selectBeverages = db.query<{ rowid: number, created_at: string, stars: number | null }, [number, number]>('select rowid,created_at,stars from beverages where rowid < ? order by rowid desc limit ?');
+    }
+
+
+    const insertBeverage = db.query('insert into beverages (created_at,stars,cheers) VALUES (?, ?, ?) RETURNING rowid');
+    const selectBeverage = db.query('select created_at,stars,cheers from beverages where rowid = ?');
+    const selectBeverages = db.query<{ rowid: number, created_at: string, stars: number | null, cheers: number | null }, [number, number]>('select rowid,created_at,stars,cheers from beverages where rowid < ? order by rowid desc limit ?');
     const countBeverages = db.query<{ count: number }, []>('select count(1) as count from beverages');
+    const incBeverageCheers = db.query<{ cheers: number }, [number]>('update beverages set cheers = COALESCE(cheers,0)+1 where rowid = ? returning cheers');
 
     return {
         db,
@@ -36,7 +48,8 @@ export function setupBeverageStore(path: string) {
             insertBeverage,
             selectBeverage,
             selectBeverages,
-            countBeverages
+            countBeverages,
+            incBeverageCheers
         }
     }
 }
@@ -44,8 +57,8 @@ export function setupBeverageStore(path: string) {
 export type BeverageStoreCtx = ReturnType<typeof setupBeverageStore>;
 
 
-export async function storeBeverage(ctx: BeverageStoreCtx, tmpImagefile: BunFile, stars: number) {
-    const res = ctx.queries.insertBeverage.get(new Date().toISOString(), stars) as { rowid: number };
+export async function storeBeverage(ctx: BeverageStoreCtx, tmpImagefile: BunFile, stars: number, cheers: number) {
+    const res = ctx.queries.insertBeverage.get(new Date().toISOString(), stars, cheers) as { rowid: number };
 
 
     if (!tmpImagefile.name) {
@@ -88,6 +101,14 @@ export async function removeBeverage(ctx: BeverageStoreCtx, id: number) {
     const file = getFile(id);
 
     await file.delete();
+}
+
+
+export function incBeverageCheers(ctx: BeverageStoreCtx, id: number) {
+
+    const result = ctx.queries.incBeverageCheers.get(id);
+
+    return result?.cheers || 0;
 }
 
 

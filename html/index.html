@@ -83,6 +83,26 @@
             height: 400px;
             object-fit: contain;
             overflow: hidden;
+            transition: transform 0.2s ease-out;
+        }
+
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(0.95);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .animate-pulse {
+            animation: pulse 0.6s forwards;
         }
 
 
@@ -172,6 +192,13 @@
             position: absolute;
             bottom: 0;
             left: 0.25em;
+        }
+
+        .beverage-cheers {
+            position: absolute;
+            bottom: 0;
+            right: 0.25em;
+            font-size: 1.25em;
         }
 
 
@@ -297,6 +324,32 @@
             form.addEventListener("submit", () => {
                 const button = previewListItem.querySelector("button");
                 button.textContent = "Uploading...";
+            });
+        </script>
+        <script>
+            document.addEventListener("dblclick", (ev) => {
+                if (ev.target.tagName === "IMG" && ev.target.dataset.beverageId) {
+                    ev.target.classList.add('animate-pulse');
+
+                    setTimeout(() => {
+                        ev.target.classList.remove('animate-pulse');
+                    }, 600);
+                    fetch("/beverages/cheers", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "x-ajax-request": "true"
+                        },
+                        body: JSON.stringify({ beverageId: ev.target.dataset.beverageId }),
+                    }).then((res) => {
+                        if (res.ok) {
+                            res.json().then(({ cheers }) => {
+                                const cheersSpan = ev.target.parentElement.querySelector(".beverage-cheers");
+                                cheersSpan.textContent = `${cheers}🍻`;
+                            });
+                        }
+                    })
+                }
             });
         </script>
         $BEVERAGES

@@ -1,5 +1,5 @@
 import { mkdir } from "node:fs/promises";
-import { countBeverages, listBeverages, removeBeverage, setupBeverageStore, storeBeverage } from "./lib/beverage-store";
+import { countBeverages, incBeverageCheers, listBeverages, removeBeverage, setupBeverageStore, storeBeverage } from "./lib/beverage-store";
 import { processImage } from "./lib/process-image";
 import { escapeHTML, randomUUIDv7 } from "bun";
 import { rm } from "node:fs/promises";
@@ -28,11 +28,17 @@ const errorHtml = await Bun.file("./html/error.html").text();
 const beverageDeleteFormHtml = await Bun.file("./html/beverage-delete-form.html").text();
 
 const writeLimit = createRateLimit({ limit: 10, windowSeconds: 60 });
+const cheersLimit = createRateLimit({ limit: 100, windowSeconds: 60 });
 const readLimit = createRateLimit({ limit: 240, windowSeconds: 60 });
 
 
-function renderBeverage({ src, deleteForm, stars }: { src: string, deleteForm?: string, stars?: string }) {
-    return beverageHtml.replace("$BEVERAGE_SRC", src).replace("$BEVERAGE_DELETE_FORM", deleteForm || "").replace("$BEVERAGE_STARS", stars || "");
+function renderBeverage({ id, src, deleteForm, stars, cheers }: { id: number, src: string, deleteForm?: string, stars?: string; cheers?: string }) {
+    return beverageHtml
+        .replace("$BEVERAGE_ID", id.toString())
+        .replace("$BEVERAGE_SRC", src)
+        .replace("$BEVERAGE_DELETE_FORM", deleteForm || "")
+        .replace("$BEVERAGE_STARS", stars || "")
+        .replace("$BEVERAGE_CHEERS", cheers || "")
 }
 
 function renderStars(count: number) {
@@ -56,7 +62,6 @@ function renderStars(count: number) {
     }
 
     return "";
-
 }
 
 function renderBeverageDeleteForm({ beverageId }: { beverageId: number }) {
@@ -73,7 +78,7 @@ function renderError({ message }: { message: string }) {
 
 function renderIndexPage({ uploadError, beverages, pageLinks }: {
     uploadError?: string;
-    beverages?: { src: string; }[],
+    beverages?: { id: number, src: string; }[],
     pageLinks: { url: string; number: number; current: boolean }[]
 }) {
 
@@ -127,8 +132,10 @@ function streamIndexPageWithBeverageList({ uploadError, currentPage: currentPage
                 controller.enqueue(
                     beverageHtml.slice(
                         beverageHtml.indexOf("$BEVERAGE_SRC") + "$BEVERAGE_SRC".length)
+                        .replace("$BEVERAGE_ID", beverage.meta.rowid.toString())
                         .replace("$BEVERAGE_DELETE_FORM", showBeverageDeleteForm ? renderBeverageDeleteForm({ beverageId: beverage.meta.rowid }) : "")
                         .replace("$BEVERAGE_STARS", renderStars(beverage.meta.stars || 0))
+                        .replace("$BEVERAGE_CHEERS", `${beverage.meta.cheers || 0}🍻`)
                 )
             }
 
@@ -154,6 +161,32 @@ Bun.serve({
     hostname: host,
     port: port,
     routes: {
+        "/beverages/cheers": async function (req, res) {
+
+            if (cheersLimit()) {
+                return new Response("Too many cheers", {
+                    status: 429
+                });
+            }
+
+            const formData = await req.json();
+
+            const beverageId = Number(formData.beverageId);
+            if (Number.isNaN(beverageId)) {
+                return new Response("Invalid inputs", {
+                    status: 400,
+                });
+            }
+
+            const cheers = incBeverageCheers(beverageStoreCtx, beverageId);
+
+            if (req.headers.has("x-ajax-request")) {
+                return Response.json({ beverageId, cheers });
+            }
+
+
+            return Response.redirect("/");
+        },
         "/beverages/delete": async function handler(req, res) {
 
             if (writeLimit()) {
@@ -169,7 +202,7 @@ Bun.serve({
 
             if (!password || typeof password !== 'string' || !beverageId || Number.isNaN(Number(beverageId))) {
                 return new Response("Invalid inputs", {
-                    status: 401,
+                    status: 400,
                 });
             }
 
@@ -180,7 +213,7 @@ Bun.serve({
                 }
                 if (!timingSafeEqual(Buffer.from(process.env.ADMIN_PASSWORD, "utf-8"), Buffer.from(password, "utf-8"))) {
                     return new Response("Uauthorized", {
-                        status: 400,
+                        status: 401,
                     });
                 }
 
@@ -257,7 +290,7 @@ Bun.serve({
                         });
                     }
 
-                    await storeBeverage(beverageStoreCtx, tmpOut, stars);
+                    await storeBeverage(beverageStoreCtx, tmpOut, stars, 0);
 
                     return Response.redirect("/");
                 } else {
